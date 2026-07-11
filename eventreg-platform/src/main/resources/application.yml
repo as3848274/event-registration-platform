@@ -1,0 +1,69 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/eventreg_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:as3848274@gmail.com}
+    password: ${MAIL_PASSWORD:password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+        transport:
+          protocol: smtp
+
+  cache:
+    type: redis
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:c2VjdXJlLXNpZ25pbmcta2V5LWZvci1ldmVudC1yZWdpc3RyYXRpb24tcGxhdGZvcm0tY2hhbmdlLW1lLWluLXByb2Q=}
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+
+  mail:
+    from: ${MAIL_FROM:noreply@eventreg.com}
+    verification-token-expiry-minutes: 15
+    password-reset-token-expiry-minutes: 15
+
+  frontend:
+    base-url: ${FRONTEND_URL:http://localhost:3000}
+
+  reminder:
+    lookahead-hours: 24
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.eventreg: DEBUG
+    org.hibernate.SQL: WARN
