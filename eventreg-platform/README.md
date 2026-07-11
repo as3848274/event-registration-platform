@@ -3,6 +3,7 @@
 Layered Spring Boot backend: **Controller → Service → Repository**.
 
 Stack: Spring Boot 3.3, Spring Security (JWT), Spring Data JPA, MySQL, Redis, JavaMailSender.
+<img width="938" height="392" alt="image" src="https://github.com/user-attachments/assets/cb8174a4-a8ce-4e35-bd01-e74b0b75f7fd" />
 
 
 ## Project layout
