@@ -21,7 +21,9 @@ com.eventreg
  └── scheduler        Reminder emails + email retry reprocessor
 ```
 
-##Core Modules 
+**Core Modules**
+
+
 **1. User & Auth Module**  
 • JWT-based authentication with refresh token rotation 
 • Role-based access control: ADMIN, ORGANISER, ATTENDEE 
