@@ -66,11 +66,16 @@ overselling
 
 ## Database schema
 • users — id, name, email, password_hash, role, is_verified, created_at 
-• events — id, organiser_id, title, venue, event_date, max_capacity, price, status, created_at 
+
+• events — id, organiser_id, title, venue, event_date, max_capacity, price, status, created_at
+
 • registrations — id, user_id, event_id, status (CONFIRMED/WAITLISTED/CANCELLED), 
 registered_at 
-• tickets — id, registration_id, token (UUID), status (CONFIRMED/USED/CANCELLED), issued_at 
+
+• tickets — id, registration_id, token (UUID), status (CONFIRMED/USED/CANCELLED), issued_at
+
 • team_registrations — id, lead_user_id, event_id, member_count, group_token 
+
 • email_retry_queue — id, recipient, subject, body, attempts, next_retry_at, status 
 
 ## What's stubbed / not included
