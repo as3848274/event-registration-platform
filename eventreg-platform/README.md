@@ -21,52 +21,51 @@ com.eventreg
  └── scheduler        Reminder emails + email retry reprocessor
 ```
 
-## Key design decisions (and why)
+##Core Modules 
+**1. User & Auth Module**  
+• JWT-based authentication with refresh token rotation 
+• Role-based access control: ADMIN, ORGANISER, ATTENDEE 
+• Email verification on signup via tokenized link (15-minute expiry) 
+• Password reset flow with single-use token stored in Redis 
+**2. Event Management Module**  
+• Organiser can create events with: title, description, venue, date/time, max capacity, ticket price 
+• Event states: DRAFT → PUBLISHED → ONGOING → COMPLETED / CANCELLED 
+• Organisers can publish, unpublish, or cancel events — cancellation triggers refund eligibility flag 
+• Admin can feature or suppress any event platform-wide 
+• Soft delete on events; historical data is retained for reporting 
+**3. Registration & Capacity Module**  
+• Atomic seat reservation using database-level row locking (SELECT FOR UPDATE) to prevent 
+overselling 
+• Waitlist auto-enrolment when event is full; configurable waitlist cap per event 
+• On cancellation by a registered attendee, the next waitlisted user is automatically promoted 
+• Duplicate registration guard — one active registration per user per event 
+• Team registration support: one member registers a group, all receive individual tickets 
+**4. Ticketing Module** 
+• Unique QR-code token generated per confirmed registration (UUID-based) 
+• Ticket status: CONFIRMED, CANCELLED, USED Check-in endpoint for organisers: scans token, marks as USED — idempotent (double scan returns 
+200, not error) 
+• Ticket download endpoint returns ticket metadata; PDF generation can be plugged in 
 
-**Concurrency-safe seat reservation.** `EventRepository.findByIdForUpdate` takes a
-`SELECT ... FOR UPDATE` lock on the event row inside the registration transaction.
+**5. Notification Module**  
+• Async email notifications via Spring's @Async + JavaMailSender 
+• Triggers: registration confirmed, waitlist joined, waitlist promoted, event cancelled, 24-hour reminder 
+• Reminder job runs via @Scheduled cron — queries events starting in next 24 hours and batches 
+emails 
 
-**Waitlist promotion is synchronous with cancellation**, inside the same lock
-(`RegistrationService.cancelRegistration` → `promoteNextWaitlisted`). This guarantees
-exactly one promotion per freed seat, even if two people cancel at the same instant.
+**6. Admin & Analytics Module**
+• Admin dashboard APIs: total registrations per event, check-in rate, waitlist count 
+• Revenue summary per organiser (price × confirmed registrations) 
+• Bulk cancel event with notification to all registered attendees 
 
-**Idempotent check-in.** Scanning an already-`USED` ticket returns 200 with the
-original check-in time instead of erroring — a double-scan at a busy entrance (flaky
-scanner, network retry) shouldn't block anyone at the door. Only a `CANCELLED` ticket
-is rejected.
-
-**Redis for single-use tokens** (email verification, password reset). TTL-based expiry
-means no scheduled cleanup job is needed — Redis just evicts the key.
-
-**Async email + DB-backed retry queue.** `EmailService.sendAsync` keeps the HTTP
-response fast. If SMTP send fails, the message is persisted to
-`email_retry_queue` and picked up by `EmailRetryScheduler` every 2 minutes with
-exponential backoff (2, 4, 8, 16, 32 min), capped at 5 attempts before being marked
-`FAILED_PERMANENTLY`.
-
-**Redis caching.** `GET /api/events` and `GET /api/events/{id}` are `@Cacheable`
-(`events` / `eventDetail` caches), evicted on any write to that event. Cheap win for
-the highest-traffic read endpoints.
-
-## Open design calls worth knowing about
-
-- **Team registration** (`teamSize > 1` in the register request body) reserves seats
-  under the same lock so a team is never split by a competing request — but confirms
-  as many seats as are available and waitlists the rest, rather than all-or-nothing.
-  Also: only the lead has an account, so every seat in the team is currently recorded
-  against the lead's user id. Collecting per-member emails is a natural extension.
-- **Unverified users cannot log in at all** (`AppUserPrincipal.isEnabled()` returns
-  `user.verified`), which is a stricter reading of "email verification on signup"
-  than "verified users get extra features." Easy to relax if you want unverified
-  users to browse/register but not, say, check in at the door.
-- **Refund eligibility** is currently just a boolean flag set on cancellation
-  (`Event.refundEligible`) — there's no real payment/refund integration, since none
-  was in the original spec.
 
 ## Database schema
-
-See the entity classes under `entity/` — they map directly to: `users`, `events`,
-`registrations`, `tickets`, `team_registrations`, `email_retry_queue`.
+• users — id, name, email, password_hash, role, is_verified, created_at 
+• events — id, organiser_id, title, venue, event_date, max_capacity, price, status, created_at 
+• registrations — id, user_id, event_id, status (CONFIRMED/WAITLISTED/CANCELLED), 
+registered_at 
+• tickets — id, registration_id, token (UUID), status (CONFIRMED/USED/CANCELLED), issued_at 
+• team_registrations — id, lead_user_id, event_id, member_count, group_token 
+• email_retry_queue — id, recipient, subject, body, attempts, next_retry_at, status 
 
 ## What's stubbed / not included
 
